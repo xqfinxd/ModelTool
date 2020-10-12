@@ -9,9 +9,9 @@ using System.Windows.Forms;
 
 namespace ModelTool
 {
-    public partial class Form1 : Form
+    public partial class ModelWin : Form
     {
-        public Form1()
+        public ModelWin()
         {
             InitializeComponent();
         }
