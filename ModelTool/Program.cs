@@ -10,8 +10,8 @@ namespace ModelTool
         [STAThread]
         private static void Main()
         {
-            ModelUtil modelUtil = new ModelUtil(@"D:\GITHUB\assimp\test\models\FBX\spider.fbx");
-            Console.WriteLine(modelUtil.scene);
+            ModelUtil modelUtil = new ModelUtil(@"E:\GITHUB\assimp\test\models\FBX\spider.fbx");
+            Console.WriteLine(modelUtil.Mesh2Lua(0));
             Console.ReadKey();
         }
     }
