@@ -5,68 +5,111 @@ using System.Collections.Generic;
 
 namespace ModelTool
 {
+    /*文件目录格式如下 []：表示文件夹 ||：表示文件
+     * **>|| sample.fbx
+     * **>[] sample
+     * **>  [] 0000-body
+     * **>    || vertex.bin
+     * **>    || face.bin
+     * **>    || ...
+     * **>  [] 0001-head
+     * **>  [] 0002-leg
+     * **>  [] ...
+     */
     internal class ModelUtil
     {
         public Scene scene = new Scene();
-        private FileInfo info = null;
+        private FileInfo fileInfo = null;
         private string name = null;
-        private Matrix4x4[] matrix4s;
-        private string require = "Mesh = require(\"mesh\")\n";
-
-        static private Func<Vector2D, string> printVec2d = v => {
-            return string.Format("    {0}, {1},\n", v.X, v.Y);
-        };
-
-        static private Func<Vector3D, string> printVec3d2 = v => {
-            return string.Format("    {0}, {1},\n", v.X, v.Y);
-        };
-
-        static private Func<Vector3D, string> printVec3d = v => {
-            return string.Format("    {0}, {1}, {2},\n", v.X, v.Y, v.Z);
-        };
-
-        static private Func<Face, string> printFace = v => {
-            return string.Format("    {0}, {1}, {2},\n", v.Indices[0], v.Indices[1], v.Indices[2]);
-        };
-
-        static private Func<Matrix4x4, string> printMat4x4 = v => {
-            string result = "";
-            for (int i = 1; i <= 4; i++)
-            {
-                result += "    ";
-                for (int j = 1; j <= 4; j++)
-                {
-                    result += v[i, j].ToString() + ", ";
-                }
-                result = result.TrimEnd(' ');
-                result += '\n';
-            }
-            return result;
-        };
+        private DirectoryInfo outDirInfo = null;
 
         public ModelUtil(string file)
         {
             AssimpContext importer = new AssimpContext();
-            info = new FileInfo(file);
+            fileInfo = new FileInfo(file);
 
-            if (info.Exists && importer.IsImportFormatSupported(info.Extension))
+            if (fileInfo.Exists && importer.IsImportFormatSupported(fileInfo.Extension))
             {
                 scene = importer.ImportFile(file,
                     PostProcessSteps.GenerateNormals |
                     PostProcessSteps.CalculateTangentSpace |
                     PostProcessSteps.Triangulate);
-                Console.WriteLine("Load File <{0}> {1}!", info.FullName, 
-                    IsEmpty() ? "Failure" : "Success");
             }
             else
             {
-                Console.WriteLine("File <{0}> doesn't exist or " +
-                    "extension <{1}> isn't supported!", 
-                    info.FullName, info.Extension);
+                Console.WriteLine("Extension <{0}> isn't supported!", fileInfo.Extension);
             }
-            name = info.Name.Substring(0, info.Name.LastIndexOf('.'));
-            matrix4s = new Matrix4x4[scene.MeshCount];
-            CalcMeshesMatrix();
+
+            name = fileInfo.Name.Substring(0, fileInfo.Name.LastIndexOf('.'));
+
+            string outDir = fileInfo.DirectoryName + @"\" + name;
+            if (!Directory.Exists(outDir))
+            {
+                outDirInfo = Directory.CreateDirectory(outDir);
+            }
+            else
+            {
+                outDirInfo = new DirectoryInfo(outDir);
+            }
+            WriteMesh(0);
+        }
+
+        private bool WriteMesh(int index)
+        {
+            if (index >= scene.MeshCount)
+            {
+                return false;
+            }
+            Mesh mesh = scene.Meshes[index];
+            //根据index和mesh.name创建文件夹
+            string dirName = string.Format(@"{0}\{1:D4}-{2}",
+                outDirInfo.FullName, index, mesh.Name);
+            if (!Directory.Exists(dirName))
+            {
+                Directory.CreateDirectory(dirName);
+            }
+
+            //在文件夹内创建数据文件并写入二进制数据
+            if (mesh.HasVertices)
+            {
+                WriteData(dirName + @"\vertex.bin", ToArray(mesh.Vertices));
+            }
+            if (mesh.HasNormals)
+            {
+                WriteData(dirName + @"\normal.bin", ToArray(mesh.Normals));
+            }
+            if (mesh.HasTangentBasis)
+            {
+                WriteData(dirName + @"\tangent.bin", ToArray(mesh.Tangents));
+                WriteData(dirName + @"\bitangent.bin", ToArray(mesh.BiTangents));
+            }
+            if (mesh.HasFaces && mesh.FaceCount > 0)
+            {
+                WriteData(dirName + @"\face.bin", mesh.GetUnsignedIndices());
+            }
+
+            return true;
+        }
+
+        private void WriteData(string fullPath, byte[] datas)
+        {
+            FileStream file = new FileStream(fullPath, FileMode.Create);
+            BinaryWriter writer = new BinaryWriter(file);
+            writer.Write(datas);
+            writer.Close();
+            file.Close();
+        }
+
+        private void WriteData(string fullPath, uint[] datas)
+        {
+            FileStream file = new FileStream(fullPath, FileMode.Create);
+            BinaryWriter writer = new BinaryWriter(file);
+            for (int i = 0; i < datas.Length; i++)
+            {
+                writer.Write(datas[i]);
+            }
+            writer.Close();
+            file.Close();
         }
 
         public bool IsEmpty()
@@ -74,95 +117,58 @@ namespace ModelTool
             return scene.RootNode == null || !scene.HasMeshes;
         }
 
-        public string Mesh2Lua(Int32 meshIndex)
+        private byte[] ToArray(List<Vector2D> vectors)
         {
-            if (meshIndex >= scene.MeshCount)
+            if (vectors.Count <= 0)
             {
                 return null;
             }
-            Mesh mesh = scene.Meshes[meshIndex];
-            string allData = "";
-            if (mesh.HasVertices)
+            List<byte> array = new List<byte>(vectors.Count * 2 * sizeof(float));
+            for (int i = 0; i < vectors.Count; i++)
             {
-                string tmp = name + ".vertex = ";
-                tmp += Data2Lua<Vector3D>(mesh.Vertices, printVec3d);
-                allData += tmp + "\n\n";
+                array.AddRange(BitConverter.GetBytes(vectors[i].X));
+                array.AddRange(BitConverter.GetBytes(vectors[i].Y));
             }
-
-            if (mesh.HasNormals)
-            {
-                string tmp = name + ".normal = ";
-                tmp += Data2Lua<Vector3D>(mesh.Normals, printVec3d);
-                allData += tmp + "\n\n";
-            }
-
-            if (mesh.HasTextureCoords(0))
-            {
-                string tmp = name + ".texCoords = ";
-                tmp += Data2Lua<Vector3D>(mesh.TextureCoordinateChannels[0], printVec3d2);
-                allData += tmp + "\n\n";
-            }
-
-            if (mesh.HasFaces)
-            {
-                string tmp = name + ".face = ";
-                tmp += Data2Lua<Face>(mesh.Faces, printFace);
-                allData += tmp + "\n\n";
-            }
-
-            {
-                string tmp = name + ".transform = ";
-                List<Matrix4x4> mat = new List<Matrix4x4>() { matrix4s[meshIndex] };
-                tmp += Data2Lua<Matrix4x4>(mat, printMat4x4);
-                allData += tmp + "\n\n";
-            }
-
-            string meshStr = string.Format(@"
-local {0} = Mesh:new()
-
-{0}.name = '{0}'
-{1}
-return {0}
-", name, allData);
-            //Console.WriteLine(meshStr);
-            return meshStr;
+            return array.ToArray();
         }
 
-        private string Data2Lua<DATA>(List<DATA> data, Func<DATA, string> func)
+        private byte[] ToArray(List<Vector3D> vectors, bool is2d = false)
         {
-            string prefix = "{\n";
-            string suffix = "}";
-            string dataStr = "";
-            for (int i = 0; i < data.Count; i++)
+            if (vectors.Count <= 0)
             {
-                dataStr += func(data[i]);
+                return null;
             }
-            return prefix + dataStr + suffix;
-        }
-
-        private void CalcMeshesMatrix()
-        {
-            Node root = scene.RootNode;
-            CalcNodeMatrix(root, Matrix4x4.Identity);
-        }
-
-        private void CalcNodeMatrix(Node node, Matrix4x4 parent)
-        {
-            Matrix4x4 curMat = parent * node.Transform;
-            if (node.HasMeshes)
+            int step = (is2d ? 2 : 3) * sizeof(float);
+            List<byte> array = new List<byte>(vectors.Count * step);
+            for (int i = 0; i < vectors.Count; i++)
             {
-                for (int i = 0; i < node.MeshCount; i++)
+                array.AddRange(BitConverter.GetBytes(vectors[i].X));
+                array.AddRange(BitConverter.GetBytes(vectors[i].Y));
+                if (!is2d)
                 {
-                    matrix4s[node.MeshIndices[i]] = curMat;
+                    array.AddRange(BitConverter.GetBytes(vectors[i].Z));
                 }
             }
-            if (node.HasChildren)
-            {
-                for (int i = 0; i < node.ChildCount; i++)
-                {
-                    CalcNodeMatrix(node.Children[i], curMat);
-                }
-            }
+            return array.ToArray();
+        }
+
+        private float[] ToArray(Matrix4x4 mat)
+        {
+            return new float[4 * 4] {
+                mat.A1, mat.A2, mat.A3, mat.A4,
+                mat.B1, mat.B2, mat.B3, mat.B4,
+                mat.C1, mat.C2, mat.C3, mat.C4,
+                mat.D1, mat.D2, mat.D3, mat.D4,
+            };
+        }
+
+        private float[] ToArray(Matrix3x3 mat)
+        {
+            return new float[3 * 3] {
+                mat.A1, mat.A2, mat.A3,
+                mat.B1, mat.B2, mat.B3,
+                mat.C1, mat.C2, mat.C3,
+            };
         }
     }
 }

@@ -11,7 +11,6 @@ namespace ModelTool
         private static void Main()
         {
             ModelUtil modelUtil = new ModelUtil(@"E:\GITHUB\assimp\test\models\FBX\spider.fbx");
-            Console.WriteLine(modelUtil.Mesh2Lua(0));
             Console.ReadKey();
         }
     }
