@@ -51,7 +51,13 @@ namespace ModelTool
             {
                 outDirInfo = new DirectoryInfo(outDir);
             }
-            WriteMesh(0);
+            for (int i = 0; i < scene.MeshCount; i++)
+            {
+                Console.WriteLine(@"{0}>>start to generate meshes[{1}]...", name, i);
+                Console.WriteLine(@"{0}>>  meshes[{1}] >> name : {2}", name, i, scene.Meshes[i].Name);
+                WriteMesh(i);
+                Console.WriteLine(@"{0}>>generate meshes[{0}] success!", name, i);
+            }
         }
 
         private bool WriteMesh(int index)
@@ -87,21 +93,43 @@ namespace ModelTool
             {
                 WriteData(dirName + @"\face.bin", mesh.GetUnsignedIndices());
             }
-
+            for (int i = 0; i < mesh.TextureCoordinateChannelCount; i++)
+            {
+                if (mesh.HasTextureCoords(i))
+                {
+                    WriteData(
+                        string.Format(@"{0}\uv{1}.bin", dirName, i),
+                        ToArray(mesh.TextureCoordinateChannels[i], true)
+                    );
+                }
+            }
+            for (int i = 0; i < mesh.VertexColorChannelCount; i++)
+            {
+                if (mesh.HasVertexColors(i))
+                {
+                    WriteData(
+                        string.Format(@"{0}\color{1}.bin", dirName, i),
+                        ToArray(mesh.VertexColorChannels[i])
+                    );
+                }
+            }
             return true;
         }
 
         private void WriteData(string fullPath, byte[] datas)
         {
+            Console.WriteLine(@"{0}>>    write file {1}", name, fullPath);
             FileStream file = new FileStream(fullPath, FileMode.Create);
             BinaryWriter writer = new BinaryWriter(file);
             writer.Write(datas);
             writer.Close();
             file.Close();
+            Console.WriteLine(@"{0}>>    file size {1}(bytes)", name, datas.Length);
         }
 
         private void WriteData(string fullPath, uint[] datas)
         {
+            Console.WriteLine(@"{0}>>    write file {1}", name, fullPath);
             FileStream file = new FileStream(fullPath, FileMode.Create);
             BinaryWriter writer = new BinaryWriter(file);
             for (int i = 0; i < datas.Length; i++)
@@ -110,6 +138,7 @@ namespace ModelTool
             }
             writer.Close();
             file.Close();
+            Console.WriteLine(@"{0}>>    file size {1}(bytes)", name, datas.Length * sizeof(uint));
         }
 
         public bool IsEmpty()
@@ -147,6 +176,27 @@ namespace ModelTool
                 if (!is2d)
                 {
                     array.AddRange(BitConverter.GetBytes(vectors[i].Z));
+                }
+            }
+            return array.ToArray();
+        }
+
+        private byte[] ToArray(List<Color4D> colors, bool is3c = false)
+        {
+            if (colors.Count <= 0)
+            {
+                return null;
+            }
+            int step = (is3c ? 3 : 4) * sizeof(float);
+            List<byte> array = new List<byte>(colors.Count * step);
+            for (int i = 0; i < colors.Count; i++)
+            {
+                array.AddRange(BitConverter.GetBytes(colors[i].R));
+                array.AddRange(BitConverter.GetBytes(colors[i].G));
+                array.AddRange(BitConverter.GetBytes(colors[i].B));
+                if (!is3c)
+                {
+                    array.AddRange(BitConverter.GetBytes(colors[i].A));
                 }
             }
             return array.ToArray();

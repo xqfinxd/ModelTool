@@ -10,7 +10,7 @@ namespace ModelTool
         [STAThread]
         private static void Main()
         {
-            ModelUtil modelUtil = new ModelUtil(@"E:\GITHUB\assimp\test\models\FBX\spider.fbx");
+            ModelUtil modelUtil = new ModelUtil(@"..\..\..\assets\spider.fbx");
             Console.ReadKey();
         }
     }
