@@ -1,7 +1,7 @@
 ﻿using Assimp;
-using System.IO;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace ModelTool
 {
@@ -16,6 +16,7 @@ namespace ModelTool
      * **>  [] 0002-leg
      * **>  [] ...
      */
+
     internal class ModelUtil
     {
         public Scene scene = new Scene();
