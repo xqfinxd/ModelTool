@@ -192,7 +192,7 @@ namespace ModelTool
             StreamWriter writer = new StreamWriter(fullPath, false);
             writer.Write(data);
             writer.Close();
-            Console.WriteLine(@"{0}>>    file size {1}(cahrs)", name, data.Length);
+            Console.WriteLine(@"{0}>>    file size {1}(chars)", name, data.Length);
         }
 
         private void WriteCamera(int index)
