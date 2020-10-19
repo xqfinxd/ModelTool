@@ -11,7 +11,7 @@ namespace ModelTool
         private static void Main(string[] args)
         {
             string inputFile = null;
-            string inputShared = "shared";
+            string inputShared = null;
             for (int i = 0; i < args.Length; i++)
             {
                 var param = args[i].Trim(' ');
@@ -25,12 +25,20 @@ namespace ModelTool
                     inputShared = param.Substring(9);
                 }
             }
+            if (inputFile == null)
+            {
+                Console.WriteLine("using --file=\"...\" --shared=\"...\"");
+                return;
+            }
             ModelUtil modelUtil = new ModelUtil(inputFile);
             if (inputShared == null)
             {
                 modelUtil.SharedDir = "shared";
             }
-            modelUtil.SharedDir = inputShared;
+            else
+            {
+                modelUtil.SharedDir = inputShared;
+            }
             modelUtil.DoWrite();
             //Console.ReadKey();
         }
