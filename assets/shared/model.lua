@@ -86,13 +86,8 @@ end
 
 function node:addmesh(name, mesh)
     if mesh then
-        if name and #name > 0 then
-            self.mesh[name] = mesh
-            return true
-        else
-            table.insert(self.mesh, mesh)
-            return true
-        end
+        table.insert(self.mesh, mesh)
+        return true
     end
     return false
 end
