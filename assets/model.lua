@@ -1,5 +1,18 @@
 local node = {}
 
+function identity(n)
+    local id = {}
+    for i = 1, n * n do 
+        id[i] = 0
+    end
+    for i = 1, n do
+        id[i * i] = 1
+    end
+    return id
+end
+
+identity4 = identity(4)
+
 function copytable(t)
     local newtable = {}
     for k, v in pairs(t) do
