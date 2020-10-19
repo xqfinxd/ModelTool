@@ -13,20 +13,12 @@ end
 
 identity4 = identity(4)
 
-function copytable(t)
-    local newtable = {}
-    for k, v in pairs(t) do
-        newtable[k] = v
-    end
-    return newtable
-end
-
 function node:instantiate()
     local data = {
         ['parent'] = nil,
         ['children'] = nil,
         ['name'] = '',
-        ['mesh'] = nil,
+        ['mesh'] = {},
         ['light'] = nil,
         ['camera'] = nil,
         ['transform'] = {
@@ -81,7 +73,7 @@ function node:getchild(...)
 end
 
 function node:hasmesh()
-    return self.mesh and true
+    return self.mesh and #self.mesh > 0
 end
 
 function node:hascamera()
@@ -92,17 +84,22 @@ function node:haslight()
     return self.light and true
 end
 
-function node:setmesh(mesh)
+function node:addmesh(name, mesh)
     if mesh then
-        self.mesh = copytable(mesh)
-        return true
+        if name and #name > 0 then
+            self.mesh[name] = mesh
+            return true
+        else
+            table.insert(self.mesh, mesh)
+            return true
+        end
     end
     return false
 end
 
 function node:setcamera(camera)
     if camera then
-        self.camera = copytable(camera)
+        self.camera = camera
         return true
     end
     return false
@@ -110,7 +107,7 @@ end
 
 function node:setlight(light)
     if light then
-        self.light = copytable(light)
+        self.light = light
         return true
     end
     return false
@@ -118,7 +115,7 @@ end
 
 function node:settransform(transform)
     if transform and #transform == 16 then
-        self.transform = copytable(transform)
+        self.transform = transform
         return true
     end
     return false

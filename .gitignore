@@ -262,3 +262,4 @@ __pycache__/
 
 assets/*/
 !assets/*.obj
+!assets/shared
