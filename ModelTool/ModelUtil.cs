@@ -279,6 +279,7 @@ local node = scene.rootnode
 ", name, SharedDir.Replace(@"\", @"/"));
 
             WriteNode(root);
+            luaScript += "return root";
             WriteData(Path.Combine(fileInfo.DirectoryName, name + ".lua"), luaScript);
         }
 
