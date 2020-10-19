@@ -261,5 +261,6 @@ __pycache__/
 *.pyc
 
 assets/*/
+assets/*.lua
 !assets/*.obj
-!assets/shared
+!assets/shared/
